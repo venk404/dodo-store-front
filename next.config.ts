@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    // Suppress warnings about critical dependencies in OpenTelemetry instrumentation
+    // These are common in instrumentation libraries that use dynamic requires
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /node_modules\/@opentelemetry\/instrumentation/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ];
+    return config;
+  },
   /* config options here */
 };
 

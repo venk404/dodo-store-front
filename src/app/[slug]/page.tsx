@@ -4,87 +4,66 @@ import Banner from "@/components/ui/dodoui/banner";
 import { ProductCardProps } from "@/components/product/ProductCard";
 import { headers } from "next/headers";
 import {
-  getOrigin,
   getCheckoutBaseUrl,
   resolveModeFromHost,
 } from "@/lib/server/resolve-storefront";
+import {
+  getBusiness,
+  getProducts,
+  isUpstreamHttpError,
+} from "@/lib/server/storefront-client";
 import { redirect } from "next/navigation";
-
-type ProductsResponse = {
-  items: Array<{
-    product_id: string;
-    name: string;
-    image?: string | null;
-    price: number;
-    currency: string;
-    description?: string | null;
-    price_detail?: {
-      pay_what_you_want?: boolean;
-      payment_frequency_count?: number;
-      payment_frequency_interval?: string;
-      trial_period_days?: number;
-    };
-  }>;
-};
 
 async function getData(slug: string) {
   const h = await headers();
-  const origin = getOrigin(h);
   const mode = resolveModeFromHost(h);
   const checkoutBaseUrl = getCheckoutBaseUrl(mode);
 
-  const businessReq = fetch(`${origin}/api/storefront/${slug}/business`, {
-    cache: "no-store",
-  });
-  const productsReq = fetch(
-    `${origin}/api/storefront/${slug}/products?page_size=100&recurring=false`,
-    { cache: "no-store" }
-  );
-  const subsReq = fetch(
-    `${origin}/api/storefront/${slug}/subscriptions?page_size=100`,
-    { cache: "no-store" }
-  );
+  try {
+    const [business, productsJson, subsJson] = await Promise.all([
+      getBusiness(mode, slug),
+      getProducts(mode, slug, { recurring: false, page_size: 100 }),
+      getProducts(mode, slug, { recurring: true, page_size: 100 }),
+    ]);
 
-  const [businessRes, productsRes, subsRes] = await Promise.all([
-    businessReq,
-    productsReq,
-    subsReq,
-  ]);
+    const businessData: Business = business;
 
-  if (businessRes.status === 404) {
-    return { notFound: true as const };
+    const products: ProductCardProps[] = productsJson.items.map((product) => ({
+      product_id: product.product_id,
+      name: product.name,
+      image: product.image || undefined,
+      price: product.price,
+      pay_what_you_want: product.price_detail?.pay_what_you_want,
+      description: product.description || "",
+      currency: product.currency,
+    }));
+
+    const subscriptions: ProductCardProps[] = subsJson.items.map((subscription) => ({
+      product_id: subscription.product_id,
+      name: subscription.name,
+      image: subscription.image || undefined,
+      price: subscription.price,
+      description: subscription.description || "",
+      currency: subscription.currency,
+      payment_frequency_count: subscription.price_detail?.payment_frequency_count,
+      payment_frequency_interval: subscription.price_detail?.payment_frequency_interval,
+      trial_period_days: subscription.price_detail?.trial_period_days,
+    }));
+
+    return {
+      business: businessData,
+      products,
+      subscriptions,
+      mode,
+      checkoutBaseUrl,
+    } as const;
+  } catch (err) {
+    if (isUpstreamHttpError(err) && err.statusCode === 404) {
+      return { notFound: true as const };
+    }
+
+    throw err;
   }
-  if (!businessRes.ok) {
-    throw new Error(`Business fetch failed: ${businessRes.status}`);
-  }
-
-  const business = (await businessRes.json()) as Business;
-  const productsJson = (await productsRes.json()) as ProductsResponse;
-  const subsJson = (await subsRes.json()) as ProductsResponse;
-
-  const products: ProductCardProps[] = (productsJson.items || []).map((p) => ({
-    product_id: p.product_id,
-    name: p.name,
-    image: p.image || undefined,
-    price: p.price,
-    pay_what_you_want: p.price_detail?.pay_what_you_want,
-    description: p.description || "",
-    currency: p.currency,
-  }));
-
-  const subscriptions: ProductCardProps[] = (subsJson.items || []).map((p) => ({
-    product_id: p.product_id,
-    name: p.name,
-    image: p.image || undefined,
-    price: p.price,
-    description: p.description || "",
-    currency: p.currency,
-    payment_frequency_count: p.price_detail?.payment_frequency_count,
-    payment_frequency_interval: p.price_detail?.payment_frequency_interval,
-    trial_period_days: p.price_detail?.trial_period_days,
-  }));
-
-  return { business, products, subscriptions, mode, checkoutBaseUrl } as const;
 }
 
 export async function generateMetadata({
@@ -94,15 +73,15 @@ export async function generateMetadata({
 }) {
   try {
     const h = await headers();
-    const origin = getOrigin(h);
+    const mode = resolveModeFromHost(h);
     const { slug } = await params;
-    const res = await fetch(`${origin}/api/storefront/${slug}/business`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return { title: "Dodo Payments" };
-    const business = (await res.json()) as Business;
+    const business = await getBusiness(mode, slug);
     return { title: business.name ?? "Dodo Payments" };
-  } catch {
+  } catch (err) {
+    if (isUpstreamHttpError(err) && err.statusCode === 404) {
+      return { title: "Dodo Payments" };
+    }
+
     return { title: "Dodo Payments" };
   }
 }

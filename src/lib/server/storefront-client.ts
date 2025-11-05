@@ -1,8 +1,20 @@
 import type { Mode } from "@/types/storefront";
 
-interface UpstreamHttpError extends Error {
+export interface UpstreamHttpError extends Error {
   statusCode: number;
   responseBody?: string;
+  name: "UpstreamHttpError";
+}
+
+export function isUpstreamHttpError(err: unknown): err is UpstreamHttpError {
+  return (
+    err !== null &&
+    typeof err === "object" &&
+    "statusCode" in err &&
+    "name" in err &&
+    err.name === "UpstreamHttpError" &&
+    typeof (err as UpstreamHttpError).statusCode === "number"
+  );
 }
 
 function getBaseUrl(mode: Mode): string {
@@ -34,13 +46,14 @@ async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export type BusinessResponse = {
+export interface BusinessResponse {
+  banner: string;
+  business_id: string;
+  logo: string;
   name: string;
-  // extend as needed based on upstream shape
-  [k: string]: unknown;
-};
+}
 
-export type OneTimeProductApiResponse = {
+export interface OneTimeProductApiResponse {
   product_id: string;
   name: string;
   image?: string | null;
@@ -50,9 +63,9 @@ export type OneTimeProductApiResponse = {
   price_detail?: {
     pay_what_you_want?: boolean;
   };
-};
+}
 
-export type RecurringProductApiResponse = {
+export interface RecurringProductApiResponse {
   product_id: string;
   name: string;
   image?: string | null;
@@ -64,7 +77,8 @@ export type RecurringProductApiResponse = {
     payment_frequency_interval?: string;
     trial_period_days?: number;
   };
-};
+}
+
 
 export async function getBusiness(mode: Mode, slug: string) {
   const base = getBaseUrl(mode);
@@ -75,8 +89,18 @@ export async function getBusiness(mode: Mode, slug: string) {
 export async function getProducts(
   mode: Mode,
   slug: string,
+  opts: { recurring: false; page_size?: number }
+): Promise<{ items: OneTimeProductApiResponse[] }>;
+export async function getProducts(
+  mode: Mode,
+  slug: string,
+  opts: { recurring: true; page_size?: number }
+): Promise<{ items: RecurringProductApiResponse[] }>;
+export async function getProducts(
+  mode: Mode,
+  slug: string,
   opts: { recurring: boolean; page_size?: number } = { recurring: false }
-) {
+): Promise<{ items: Array<OneTimeProductApiResponse | RecurringProductApiResponse> }> {
   const base = getBaseUrl(mode);
   const params = new URLSearchParams();
   params.set("recurring", String(opts.recurring));

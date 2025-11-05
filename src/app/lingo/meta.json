@@ -314,6 +314,22 @@
           "skip": false,
           "overrides": {},
           "content": "Subscriptions"
+        },
+        "11/declaration/body/4/argument/5/1/expression/right-title": {
+          "type": "attribute",
+          "hash": "a003449ecbde6b7a73044f46ea6bbe75",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Products"
+        },
+        "11/declaration/body/4/argument/5/3/expression/right/1-title": {
+          "type": "attribute",
+          "hash": "0d17f4d8d660df40b41d82e0171af6ad",
+          "context": "",
+          "skip": false,
+          "overrides": {},
+          "content": "Subscriptions"
         }
       }
     },
