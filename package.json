@@ -9,9 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "build:cloudflare": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy:prod": "opennextjs-cloudflare build && wrangler deploy --name dodo-store-front",
-    "deploy:dev": "opennextjs-cloudflare build && wrangler deploy --name dodo-store-front-dev",
+    "preview": "wrangler dev",
+    "deploy:prod": "wrangler deploy --name dodo-store-front --keep-vars",
+    "deploy:dev": "wrangler deploy --name dodo-store-front-dev --keep-vars",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
