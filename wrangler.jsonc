@@ -9,5 +9,26 @@
   },
   "observability": {
     "enabled": true
+  },
+
+  "env": {
+    "dev": {
+      "name": "dodo-store-front-dev",
+      "vars": {
+        "DODO_LIVE_API_URL": "https://live.dodopayments.tech",
+        "DODO_LIVE_CHECKOUT_URL": "https://checkout.dodopayments.tech",
+        "DODO_TEST_API_URL": "https://test.dodopayments.tech",
+        "DODO_TEST_CHECKOUT_URL": "https://test.checkout.dodopayments.tech"
+      }
+    },
+    "prod": {
+      "name": "dodo-store-front",
+      "vars": {
+        "DODO_LIVE_API_URL": "https://live.dodopayments.com",
+        "DODO_LIVE_CHECKOUT_URL": "https://checkout.dodopayments.com",
+        "DODO_TEST_API_URL": "https://test.dodopayments.com",
+        "DODO_TEST_CHECKOUT_URL": "https://test.checkout.dodopayments.com"
+      }
+    }
   }
 }
